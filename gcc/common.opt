@@ -1893,6 +1893,13 @@ fpartial-inlining
 Common Report Var(flag_partial_inlining) Optimization
 Perform partial inlining.
 
+fparse-info
+Common Separate Var(parse_info_file_name)
+-fparse-info <file>	Emit parseinfo information into <file>.
+
+fparse-info=
+Common Joined Alias(fparse-info)
+
 fpre-ipa-mem-report
 Common Report Var(pre_ipa_mem_report)
 Report on memory allocation before interprocedural optimization.

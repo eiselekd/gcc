@@ -251,7 +251,7 @@ struct GTY(()) cpp_token {
   {
     /* An identifier.  */
     struct cpp_identifier GTY ((tag ("CPP_TOKEN_FLD_NODE"))) node;
-	 
+
     /* Inherit padding from this token.  */
     cpp_token * GTY ((tag ("CPP_TOKEN_FLD_SOURCE"))) source;
 
@@ -269,7 +269,7 @@ struct GTY(()) cpp_token {
     unsigned int GTY ((tag ("CPP_TOKEN_FLD_PRAGMA"))) pragma;
   } GTY ((desc ("cpp_token_val_index (&%1)"))) val;
 
-#ifdef HTMLTAG_ENABLE  
+#ifdef HTMLTAG_ENABLE
   int htmltag_tokid;
   struct cpp_macro *htmltag_macro;
 #endif
@@ -442,7 +442,7 @@ struct cpp_options
   /* Nonzero means we're looking at already preprocessed code, so don't
      bother trying to do macro expansion and whatnot.  */
   unsigned char preprocessed;
-  
+
   /* Nonzero means we are going to emit debugging logs during
      preprocessing.  */
   unsigned char debug;
@@ -552,6 +552,13 @@ struct cpp_options
 
   /* True enables canonicalization of system header file paths. */
   bool canonical_system_headers;
+
+  struct htmltag_options_{
+
+    FILE *dump;
+
+  } htmltag;
+
 };
 
 /* Callback for header lookup for HEADER, which is the name of a
@@ -642,7 +649,7 @@ struct cpp_dir
   /* Is this a user-supplied directory? */
   bool user_supplied_p;
 
-  /* The canonicalized NAME as determined by lrealpath.  This field 
+  /* The canonicalized NAME as determined by lrealpath.  This field
      is only used by hosts that lack reliable inode numbers.  */
   char *canonical_name;
 
@@ -870,6 +877,7 @@ extern void cpp_destroy (cpp_reader *);
 
 extern unsigned int cpp_token_len (const cpp_token *);
 extern unsigned char *cpp_token_as_text (cpp_reader *, const cpp_token *);
+extern int cpp_is_spellable(const cpp_token *);
 extern unsigned char *cpp_spell_token (cpp_reader *, const cpp_token *,
 				       unsigned char *, bool);
 extern void cpp_register_pragma (cpp_reader *, const char *, const char *,
@@ -910,7 +918,7 @@ extern cppchar_t cpp_host_to_exec_charset (cpp_reader *, cppchar_t);
 /* Used to register macros and assertions, perhaps from the command line.
    The text is the same as the command line argument.  */
 extern void cpp_define (cpp_reader *, const char *);
-extern void cpp_define_formatted (cpp_reader *pfile, 
+extern void cpp_define_formatted (cpp_reader *pfile,
 				  const char *fmt, ...) ATTRIBUTE_PRINTF_2;
 extern void cpp_assert (cpp_reader *, const char *);
 extern void cpp_undef (cpp_reader *, const char *);
@@ -1209,5 +1217,6 @@ typedef struct cpp_context cpp_context;
 typedef struct cpp_context_htmltag_info cpp_context_htmltag_info;
 extern void htmltag_register_tok(cpp_reader *pfile, const cpp_token *);
 extern void htmltag_register_token_context(cpp_reader *pfile, const cpp_context *, cpp_context_htmltag_info *);
+extern void htmltag_dump(cpp_reader *pfile, FILE *f);
 
 #endif /* ! LIBCPP_CPPLIB_H */

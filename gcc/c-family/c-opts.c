@@ -139,7 +139,7 @@ static struct deferred_opt
 } *deferred_opts;
 
 
-extern const unsigned int 
+extern const unsigned int
 c_family_lang_mask = (CL_C | CL_CXX | CL_ObjC | CL_ObjCXX);
 
 /* Defer option CODE with argument ARG.  */
@@ -686,15 +686,15 @@ c_common_handle_option (size_t scode, const char *arg, int value,
   switch (c_language)
     {
     case clk_c:
-      C_handle_option_auto (&global_options, &global_options_set, 
-                            scode, arg, value, 
+      C_handle_option_auto (&global_options, &global_options_set,
+                            scode, arg, value,
                             c_family_lang_mask, kind,
                             loc, handlers, global_dc);
       break;
 
     case clk_objc:
       ObjC_handle_option_auto (&global_options, &global_options_set,
-                               scode, arg, value, 
+                               scode, arg, value,
                                c_family_lang_mask, kind,
                                loc, handlers, global_dc);
       break;
@@ -971,6 +971,12 @@ c_common_post_options (const char **pfilename)
 #endif
     }
 
+  /* given by -fparse-info <file>, common.opt */
+  if (parse_info_file_name) {
+    cpp_opts = cpp_get_options (parse_in);
+    cpp_opts->htmltag.dump = fopen(parse_info_file_name, "w");
+  }
+
   if (flag_preprocess_only)
     {
       /* Open the output now.  We must do so even if flag_no_output is
@@ -1016,6 +1022,7 @@ c_common_post_options (const char **pfilename)
       /* Yuk.  WTF is this?  I do know ObjC relies on it somewhere.  */
       input_location = UNKNOWN_LOCATION;
     }
+
 
   cb = cpp_get_callbacks (parse_in);
   cb->file_change = cb_file_change;
@@ -1106,11 +1113,20 @@ c_common_parse_file (void)
       push_file_scope ();
       c_parse_file ();
       pop_file_scope ();
+
+      if (cpp_get_options(parse_in)->htmltag.dump) {
+	htmltag_dump(parse_in, cpp_get_options(parse_in)->htmltag.dump);
+	fclose(cpp_get_options(parse_in)->htmltag.dump);
+	cpp_get_options(parse_in)->htmltag.dump;
+      }
+
       /* And end the main input file, if the debug writer wants it  */
       if (debug_hooks->start_end_main_source_file)
 	(*debug_hooks->end_source_file) (0);
       if (++i >= num_in_fnames)
 	break;
+
+
       cpp_undef_all (parse_in);
       cpp_clear_file_cache (parse_in);
       this_input_filename
@@ -1125,6 +1141,7 @@ c_common_parse_file (void)
           dump_end (TDI_class, class_dump_file);
           class_dump_file = NULL;
         }
+
       /* If an input file is missing, abandon further compilation.
 	 cpplib has issued a diagnostic.  */
       if (!this_input_filename)
@@ -1292,7 +1309,7 @@ sanitize_cpp_opts (void)
 
   /* Wlong-long is disabled by default. It is enabled by:
       [-Wpedantic | -Wtraditional] -std=[gnu|c]++98 ; or
-      [-Wpedantic | -Wtraditional] -std=non-c99 
+      [-Wpedantic | -Wtraditional] -std=non-c99
 
       Either -Wlong-long or -Wno-long-long override any other settings.
       ??? These conditions should be handled in c.opt.  */
@@ -1490,13 +1507,13 @@ cb_file_change (cpp_reader * ARG_UNUSED (pfile),
   else
     fe_file_change (new_map);
 
-  if (new_map 
+  if (new_map
       && (new_map->reason == LC_ENTER || new_map->reason == LC_RENAME))
     {
       /* Signal to plugins that a file is included.  This could happen
 	 several times with the same file path, e.g. because of
 	 several '#include' or '#line' directives...  */
-      invoke_plugin_callbacks 
+      invoke_plugin_callbacks
 	(PLUGIN_INCLUDE_FILE,
 	 const_cast<char*> (ORDINARY_MAP_FILE_NAME (new_map)));
     }

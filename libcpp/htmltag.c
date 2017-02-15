@@ -2,11 +2,11 @@
 #include "system.h"
 #include "htmltag.h"
 
-static int isresverted = 0;
+static int isreverted = 0;
 struct htmltag_tree *htmltag = 0;
 
 struct htmltag_tree *htmltag_alloc(enum htmltag_type typ) {
-  
+
   struct htmltag_tree *h = 0;
   switch(typ) {
   case HTMLTAG_TOKEN: {
@@ -25,7 +25,7 @@ struct htmltag_tree *htmltag_alloc(enum htmltag_type typ) {
     while(1) {};
     break;
   }
-  
+
   h->type = typ;
   h->n = htmltag;
   htmltag = h;
@@ -85,7 +85,7 @@ void htmltag_register_token_context(cpp_reader *pfile, const cpp_context *ctx, c
 
 void htmltag_revert(void) {
   struct htmltag_tree *p = htmltag, *n;
-  if (isresverted)
+  if (isreverted)
     return;
   htmltag = 0;
   while (p) {
@@ -94,18 +94,26 @@ void htmltag_revert(void) {
     htmltag = p;
     p = n;
   }
-  isresverted = 1;
+  isreverted = 1;
 }
 
-void htmltag_print(void) {
+void htmltag_dump(cpp_reader *pfile, FILE *f)
+{
   struct htmltag_tree *p;
   htmltag_revert();
   p = htmltag;
+  fprintf(f, "Trace:\n");
   while (p) {
     switch(p->type) {
-    case HTMLTAG_TOKEN:
-      // end = cpp_spell_token (pfile, token, start, false);
+    case HTMLTAG_TOKEN: {
+      const cpp_token *token = &(((struct htmltag_tree_token *)p)->tok);
+      if (!cpp_is_spellable(token)) {
+	fprintf(f, "<->\n");
+      } else {
+	fprintf(f, "%d:%s\n", token->htmltag_tokid, cpp_token_as_text (pfile, token));
+      }
       break;
+    }
     case HTMLTAG_CONTEXT:
       break;
     }

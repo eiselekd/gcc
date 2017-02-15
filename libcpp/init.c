@@ -25,6 +25,7 @@ along with this program; see the file COPYING3.  If not see
 #include "mkdeps.h"
 #include "localedir.h"
 #include "filenames.h"
+#include "htmltag.h"
 
 #ifndef ENABLE_CANONICAL_SYSTEM_HEADERS
 #ifdef HAVE_DOS_BASED_FILE_SYSTEM
@@ -291,6 +292,7 @@ cpp_destroy (cpp_reader *pfile)
   struct def_pragma_macro *pmacro;
   tokenrun *run, *runn;
   int i;
+
 
   free (pfile->op_stack);
 
@@ -725,7 +727,7 @@ read_original_directory (cpp_reader *pfile)
       debugdir[token->val.str.len - 4] = '\0';
 
       pfile->cb.dir_change (pfile, debugdir);
-    }      
+    }
 }
 
 /* This is called at the end of preprocessing.  It pops the last
