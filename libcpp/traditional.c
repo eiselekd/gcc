@@ -643,6 +643,7 @@ _cpp_scan_out_logical_line (cpp_reader *pfile, cpp_macro *macro,
 				  len);
 			  buf[len + 1] = '\n';
 
+			  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_TRADITIONAL_BUILDIN);
 			  const unsigned char *ctx_rlimit = RLIMIT (context);
 			  const unsigned char *saved_cur = pfile->buffer->cur;
 			  const unsigned char *saved_rlimit
@@ -693,7 +694,7 @@ _cpp_scan_out_logical_line (cpp_reader *pfile, cpp_macro *macro,
 			  buf[len] = '\n';
 			  text = buf;
 			  _cpp_push_text_context (pfile, fmacro.node,
-						  text, len);
+						  text, len, &ctxinfo);
 			  goto new_context;
 			}
 		      break;
@@ -830,6 +831,7 @@ push_replacement_text (cpp_reader *pfile, cpp_hashnode *node)
   size_t len;
   const uchar *text;
   uchar *buf;
+  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_TRADITIONAL_REPLACEMENT);
 
   if (node->flags & NODE_BUILTIN)
     {
@@ -849,7 +851,7 @@ push_replacement_text (cpp_reader *pfile, cpp_hashnode *node)
       len = macro->count;
     }
 
-  _cpp_push_text_context (pfile, node, text, len);
+  _cpp_push_text_context (pfile, node, text, len, &ctxinfo);
 }
 
 /* Returns TRUE if traditional macro recursion is detected.  */
@@ -962,6 +964,7 @@ static void
 replace_args_and_push (cpp_reader *pfile, struct fun_macro *fmacro)
 {
   cpp_macro *macro = fmacro->node->value.macro;
+  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_TRADITIONAL_ARGS_RESULT);
 
   if (macro->paramc == 0)
     push_replacement_text (pfile, fmacro->node);
@@ -1060,7 +1063,7 @@ replace_args_and_push (cpp_reader *pfile, struct fun_macro *fmacro)
 
       /* \n-terminate.  */
       *p = '\n';
-      _cpp_push_text_context (pfile, fmacro->node, BUFF_FRONT (buff), len);
+      _cpp_push_text_context (pfile, fmacro->node, BUFF_FRONT (buff), len, &ctxinfo);
 
       /* So we free buffer allocation when macro is left.  */
       pfile->context->buff = buff;

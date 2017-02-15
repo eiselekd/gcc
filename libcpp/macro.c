@@ -27,6 +27,9 @@ along with this program; see the file COPYING3.  If not see
 #include "cpplib.h"
 #include "internal.h"
 
+int context_idrun = 0;
+int macro_id = 0;
+
 typedef struct macro_arg macro_arg;
 /* This structure represents the tokens of a macro argument.  These
    tokens can be macro themselves, in which case they can be either
@@ -96,10 +99,10 @@ static int enter_macro_context (cpp_reader *, cpp_hashnode *,
 static int builtin_macro (cpp_reader *, cpp_hashnode *,
 			  source_location, source_location);
 static void push_ptoken_context (cpp_reader *, cpp_hashnode *, _cpp_buff *,
-				 const cpp_token **, unsigned int);
+				 const cpp_token **, unsigned int, cpp_context_htmltag_info *);
 static void push_extended_tokens_context (cpp_reader *, cpp_hashnode *,
 					  _cpp_buff *, source_location *,
-					  const cpp_token **, unsigned int);
+					  const cpp_token **, unsigned int, cpp_context_htmltag_info *);
 static _cpp_buff *collect_args (cpp_reader *, const cpp_hashnode *,
 				_cpp_buff **, unsigned *);
 static cpp_context *next_context (cpp_reader *);
@@ -439,6 +442,7 @@ builtin_macro (cpp_reader *pfile, cpp_hashnode *node,
   const uchar *buf;
   size_t len;
   char *nbuf;
+  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo,CPP_CONTEXT_HTMLTAG_BUILDIN_RESULT);
 
   if (node->value.builtin == BT_PRAGMA)
     {
@@ -480,10 +484,10 @@ builtin_macro (cpp_reader *pfile, cpp_hashnode *node,
 			    map, /*macro_token_index=*/0);
       push_extended_tokens_context (pfile, node, token_buf, virt_locs,
 				    (const cpp_token **)token_buf->base,
-				    1);
+				    1, &ctxinfo);
     }
   else
-    _cpp_push_token_context (pfile, NULL, token, 1);
+    _cpp_push_token_context (pfile, NULL, token, 1, &ctxinfo);
   if (pfile->buffer->cur != pfile->buffer->rlimit)
     cpp_error (pfile, CPP_DL_ICE, "invalid built-in macro \"%s\"",
 	       NODE_NAME (node));
@@ -681,6 +685,7 @@ paste_all_tokens (cpp_reader *pfile, const cpp_token *lhs)
   const cpp_token *rhs = NULL;
   cpp_context *context = pfile->context;
   source_location virt_loc = 0;
+  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_PASTE_RESULT);
 
   /* We are expanding a macro and we must have been called on a token
      that appears at the left hand side of a ## operator.  */
@@ -748,10 +753,10 @@ paste_all_tokens (cpp_reader *pfile, const cpp_token *lhs)
 			     virt_loc, 0, NULL, 0);
       push_extended_tokens_context (pfile, context->c.mc->macro_node,
 				    token_buf, virt_locs,
-				    (const cpp_token **)token_buf->base, 1);
+				    (const cpp_token **)token_buf->base, 1, &ctxinfo);
     }
   else
-    _cpp_push_token_context (pfile, NULL, lhs, 1);
+    _cpp_push_token_context (pfile, NULL, lhs, 1, &ctxinfo);
 }
 
 /* Returns TRUE if the number of arguments ARGC supplied in an
@@ -1057,12 +1062,13 @@ funlike_invocation_p (cpp_reader *pfile, cpp_hashnode *node,
      file.  We mustn't back up over the latter.  Ugh.  */
   if (token->type != CPP_EOF || token == &pfile->eof)
     {
+      CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_FUNLIKE_PADDING);
       /* Back up.  We may have skipped padding, in which case backing
 	 up more than one token when expanding macros is in general
 	 too difficult.  We re-insert it in its own context.  */
       _cpp_backup_tokens (pfile, 1);
       if (padding)
-	_cpp_push_token_context (pfile, NULL, padding, 1);
+	_cpp_push_token_context (pfile, NULL, padding, 1, &ctxinfo);
     }
 
   return NULL;
@@ -1181,6 +1187,8 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
       if (macro->paramc == 0)
 	{
 	  unsigned tokens_count = macro_real_token_count (macro);
+	  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_REPLACE_RESULT);
+	  
 	  if (CPP_OPTION (pfile, track_macro_expansion))
 	    {
 	      unsigned int i;
@@ -1207,19 +1215,21 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
 					    virt_locs,
 					    (const cpp_token **)
 					    macro_tokens->base,
-					    tokens_count);
+					    tokens_count, &ctxinfo);
 	    }
 	  else
 	    _cpp_push_token_context (pfile, node, macro->exp.tokens,
-				     tokens_count);
+				     tokens_count, &ctxinfo);
 	  num_macro_tokens_counter += tokens_count;
 	}
 
       if (pragma_buff)
 	{
+	  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_REPLACE_PRAGMA_RESULT);
+	  
 	  if (!pfile->state.in_directive)
 	    _cpp_push_token_context (pfile, NULL,
-				     padding_token (pfile, result), 1);
+				     padding_token (pfile, result), 1, &ctxinfo);
 	  do
 	    {
 	      unsigned tokens_count;
@@ -1229,7 +1239,7 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
 			      - (const cpp_token **) pragma_buff->base);
 	      push_ptoken_context (pfile, NULL, pragma_buff,
 				   (const cpp_token **) pragma_buff->base,
-				   tokens_count);
+				   tokens_count, &ctxinfo);
 	      pragma_buff = tail;
 	      if (!CPP_OPTION (pfile, track_macro_expansion))
 		num_macro_tokens_counter += tokens_count;
@@ -1559,6 +1569,8 @@ replace_args (cpp_reader *pfile, cpp_hashnode *node, cpp_macro *macro,
   unsigned int exp_count;
   const line_map_macro *map = NULL;
   int track_macro_exp;
+  CPP_CONTEXT_HTMLTAG_INFO(ctx_typ, CPP_CONTEXT_HTMLTAG_REPLACE_ARGS_RESULT);
+  
 
   /* First, fully macro-expand arguments, calculating the number of
      tokens in the final expansion as we go.  The ordering of the if
@@ -1882,10 +1894,10 @@ replace_args (cpp_reader *pfile, cpp_hashnode *node, cpp_macro *macro,
 
   if (track_macro_exp)
     push_extended_tokens_context (pfile, node, buff, virt_locs, first,
-				  tokens_buff_count (buff));
+				  tokens_buff_count (buff), &ctx_typ);
   else
     push_ptoken_context (pfile, node, buff, first,
-			 tokens_buff_count (buff));
+			 tokens_buff_count (buff), &ctx_typ);
 
   num_macro_tokens_counter += tokens_buff_count (buff);
 }
@@ -1928,15 +1940,18 @@ next_context (cpp_reader *pfile)
 /* Push a list of pointers to tokens.  */
 static void
 push_ptoken_context (cpp_reader *pfile, cpp_hashnode *macro, _cpp_buff *buff,
-		     const cpp_token **first, unsigned int count)
+		     const cpp_token **first, unsigned int count, cpp_context_htmltag_info *info)
 {
   cpp_context *context = next_context (pfile);
-
+  (void) info;
   context->tokens_kind = TOKENS_KIND_INDIRECT;
   context->c.macro = macro;
   context->buff = buff;
   FIRST (context).ptoken = first;
   LAST (context).ptoken = first + count;
+
+  htmltag_register_token_context(pfile, context, info);
+  
 }
 
 /* Push a list of tokens.
@@ -1947,9 +1962,10 @@ push_ptoken_context (cpp_reader *pfile, cpp_hashnode *macro, _cpp_buff *buff,
    the current macro.  */
 void
 _cpp_push_token_context (cpp_reader *pfile, cpp_hashnode *macro,
-			 const cpp_token *first, unsigned int count)
+			 const cpp_token *first, unsigned int count, cpp_context_htmltag_info *info)
 {
   cpp_context *context;
+  (void) info;
 
    if (macro == NULL)
      macro = macro_of_context (pfile->context);
@@ -1960,6 +1976,9 @@ _cpp_push_token_context (cpp_reader *pfile, cpp_hashnode *macro,
    context->buff = NULL;
    FIRST (context).token = first;
    LAST (context).token = first + count;
+
+   htmltag_register_token_context(pfile, context, info);
+
 }
 
 /* Build a context containing a list of tokens as well as their
@@ -1979,10 +1998,11 @@ push_extended_tokens_context (cpp_reader *pfile,
 			      _cpp_buff *token_buff,
 			      source_location *virt_locs,
 			      const cpp_token **first,
-			      unsigned int count)
+			      unsigned int count, cpp_context_htmltag_info *info)
 {
   cpp_context *context;
   macro_context *m;
+  (void) info;
 
   if (macro == NULL)
     macro = macro_of_context (pfile->context);
@@ -1998,14 +2018,18 @@ push_extended_tokens_context (cpp_reader *pfile,
   context->c.mc = m;
   FIRST (context).ptoken = first;
   LAST (context).ptoken = first + count;
+
+  htmltag_register_token_context(pfile, context, info);
+
 }
 
 /* Push a traditional macro's replacement text.  */
 void
 _cpp_push_text_context (cpp_reader *pfile, cpp_hashnode *macro,
-			const uchar *start, size_t len)
+			const uchar *start, size_t len, cpp_context_htmltag_info *info)
 {
   cpp_context *context = next_context (pfile);
+  (void) info;
 
   context->tokens_kind = TOKENS_KIND_DIRECT;
   context->c.macro = macro;
@@ -2211,6 +2235,7 @@ expand_arg (cpp_reader *pfile, macro_arg *arg)
   size_t capacity;
   bool saved_warn_trad;
   bool track_macro_exp_p = CPP_OPTION (pfile, track_macro_expansion);
+  CPP_CONTEXT_HTMLTAG_INFO(ctxsrcinfo, CPP_CONTEXT_HTMLTAG_EXPAND_ARG_SRC);
 
   if (arg->count == 0
       || arg->expanded != NULL)
@@ -2228,10 +2253,10 @@ expand_arg (cpp_reader *pfile, macro_arg *arg)
     push_extended_tokens_context (pfile, NULL, NULL,
 				  arg->virt_locs,
 				  arg->first,
-				  arg->count + 1);
+				  arg->count + 1, &ctxsrcinfo);
   else
     push_ptoken_context (pfile, NULL, NULL,
-			 arg->first, arg->count + 1);
+			 arg->first, arg->count + 1, &ctxsrcinfo);
 
   for (;;)
     {
@@ -2528,6 +2553,7 @@ cpp_get_token_1 (cpp_reader *pfile, source_location *location)
 					       virt_loc);
 		  else if (whitespace_after)
 		    {
+		      CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_WHITESPACE);
 		      /* If macro_to_expand hook returned NULL and it
 			 ate some tokens, see if we don't need to add
 			 a padding token in between this and the
@@ -2537,7 +2563,7 @@ cpp_get_token_1 (cpp_reader *pfile, source_location *location)
 			  && (peek_tok->flags & PREV_WHITE) == 0)
 			_cpp_push_token_context (pfile, NULL,
 						 padding_token (pfile,
-								peek_tok), 1);
+								peek_tok), 1, &ctxinfo);
 		    }
 		}
 	    }
@@ -3198,6 +3224,7 @@ _cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node)
       (sizeof (cpp_macro));
   else
     macro = (cpp_macro *) _cpp_aligned_alloc (pfile, sizeof (cpp_macro));
+  macro->id = macro_id++;
   macro->line = pfile->directive_line;
   macro->params = 0;
   macro->paramc = 0;

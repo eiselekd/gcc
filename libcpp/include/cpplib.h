@@ -22,6 +22,8 @@ along with this program; see the file COPYING3.  If not see
 #ifndef LIBCPP_CPPLIB_H
 #define LIBCPP_CPPLIB_H
 
+#define HTMLTAG_ENABLE
+
 #include <sys/types.h>
 #include "symtab.h"
 #include "line-map.h"
@@ -146,6 +148,7 @@ struct _cpp_file;
   TK(MACRO_ARG,		NONE)	 /* Macro argument.  */			\
   TK(PRAGMA,		NONE)	 /* Only for deferred pragmas.  */	\
   TK(PRAGMA_EOL,	NONE)	 /* End-of-line for deferred pragmas.  */ \
+  TK(PARSEINFOSTACK,	NONE)	 /* push parseinfo token on path stack.  */ \
   TK(PADDING,		NONE)	 /* Whitespace for -E.	*/
 
 #define OP(e, s) CPP_ ## e,
@@ -265,6 +268,11 @@ struct GTY(()) cpp_token {
     /* Caller-supplied identifier for a CPP_PRAGMA.  */
     unsigned int GTY ((tag ("CPP_TOKEN_FLD_PRAGMA"))) pragma;
   } GTY ((desc ("cpp_token_val_index (&%1)"))) val;
+
+#ifdef HTMLTAG_ENABLE  
+  int htmltag_tokid;
+  struct cpp_macro *htmltag_macro;
+#endif
 };
 
 /* Say which field is in use.  */
@@ -1195,5 +1203,11 @@ extern bool cpp_userdef_char_p
   (enum cpp_ttype type);
 extern const char * cpp_get_userdef_suffix
   (const cpp_token *);
+
+/* In htmltag.c */
+typedef struct cpp_context cpp_context;
+typedef struct cpp_context_htmltag_info cpp_context_htmltag_info;
+extern void htmltag_register_tok(cpp_reader *pfile, const cpp_token *);
+extern void htmltag_register_token_context(cpp_reader *pfile, const cpp_context *, cpp_context_htmltag_info *);
 
 #endif /* ! LIBCPP_CPPLIB_H */

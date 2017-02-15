@@ -379,6 +379,11 @@ c_common_has_attribute (cpp_reader *pfile)
   return result;
 }
 
+
+static void c_lex_outtoken(cpp_reader *pfile, const cpp_token *tok) {
+  htmltag_register_tok(pfile, tok);
+}
+
 /* Read a token and return its type.  Fill *VALUE with its value, if
    applicable.  Fill *CPP_FLAGS with the token's flags, if it is
    non-NULL.  */
@@ -398,6 +403,8 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
   tok = cpp_get_token_with_location (parse_in, loc);
   type = tok->type;
 
+  c_lex_outtoken(parse_in, tok);
+  
  retry_after_at:
   switch (type)
     {

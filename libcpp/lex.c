@@ -38,6 +38,8 @@ struct token_spelling
   const unsigned char *name;
 };
 
+int tokid = 1;
+
 static const unsigned char *const digraph_spellings[] =
 { UC"%:", UC"%:%:", UC"<:", UC":>", UC"<%", UC"%>" };
 
@@ -2521,6 +2523,7 @@ _cpp_temp_token (cpp_reader *pfile)
 
   result = pfile->cur_token++;
   result->src_loc = old->src_loc;
+  result->htmltag_tokid = tokid++;
   return result;
 }
 
@@ -2657,7 +2660,7 @@ _cpp_get_fresh_line (cpp_reader *pfile)
    otherwise returns to the start of the token buffer if permissible.
    Returns the location of the lexed token.  */
 cpp_token *
-_cpp_lex_direct (cpp_reader *pfile)
+_cpp_lex_direct_real (cpp_reader *pfile)
 {
   cppchar_t c;
   cpp_buffer *buffer;
@@ -3112,6 +3115,14 @@ _cpp_lex_direct (cpp_reader *pfile)
     }
 
   return result;
+}
+
+cpp_token *
+_cpp_lex_direct (cpp_reader *pfile)
+{
+  cpp_token *tok = _cpp_lex_direct_real (pfile);
+  tok->htmltag_tokid = tokid++;
+  return tok;
 }
 
 /* An upper bound on the number of bytes needed to spell TOKEN.

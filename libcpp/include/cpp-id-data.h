@@ -79,4 +79,7 @@ struct GTY(()) cpp_macro {
      end to track invalid redefinitions with consecutive CPP_PASTE
      tokens.  */
   unsigned int extra_tokens : 1;
+
+  /* identify macro */
+  unsigned int id;
 };

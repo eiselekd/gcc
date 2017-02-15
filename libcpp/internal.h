@@ -223,6 +223,32 @@ struct cpp_context
   enum context_tokens_kind tokens_kind;
 };
 
+enum cpp_context_htmltag_type {
+  CPP_CONTEXT_HTMLTAG_REPLACE_ARGS_RESULT, /* replace_args() */
+  CPP_CONTEXT_HTMLTAG_REPLACE_RESULT, /* enter_macro_context.paramc==0 */
+  CPP_CONTEXT_HTMLTAG_REPLACE_PRAGMA_RESULT, /* enter_macro_context pragma */
+  CPP_CONTEXT_HTMLTAG_PASTE_RESULT, /* paste_all_tokens() */
+  CPP_CONTEXT_HTMLTAG_BUILDIN_RESULT, /* builtin_macro() */
+  CPP_CONTEXT_HTMLTAG_EXPAND_ARG_SRC, /* expand_arg() */
+  CPP_CONTEXT_HTMLTAG_WHITESPACE, /* cpp_get_token_1() */
+  CPP_CONTEXT_HTMLTAG_FUNLIKE_PADDING, /* funlike_invocation_p() */
+  CPP_CONTEXT_HTMLTAG_PRAGMA_SRC, /* do_pragma() */
+  CPP_CONTEXT_HTMLTAG_DESTRINGIZE_SRC, /* destringize_and_run() */
+  
+  CPP_CONTEXT_HTMLTAG_TRADITIONAL_BUILDIN, /* traditionsl.c:_cpp_scan_out_logical_line() */
+  CPP_CONTEXT_HTMLTAG_TRADITIONAL_REPLACEMENT, /* traditoinsl.c: push_replacement_text() */
+  CPP_CONTEXT_HTMLTAG_TRADITIONAL_ARGS_RESULT, /* traditional.c: replace_args_and_push() */
+};
+
+typedef struct cpp_context_htmltag_info
+{
+  int context_id;
+  int context_type;
+} cpp_context_htmltag_info;
+
+extern int context_idrun;
+#define CPP_CONTEXT_HTMLTAG_INFO(n, typ) cpp_context_htmltag_info n = { context_idrun++, typ };
+  
 struct lexer_state
 {
   /* Nonzero if first token on line is CPP_HASH.  */
@@ -625,7 +651,7 @@ extern void _cpp_free_definition (cpp_hashnode *);
 extern bool _cpp_create_definition (cpp_reader *, cpp_hashnode *);
 extern void _cpp_pop_context (cpp_reader *);
 extern void _cpp_push_text_context (cpp_reader *, cpp_hashnode *,
-				    const unsigned char *, size_t);
+				    const unsigned char *, size_t, cpp_context_htmltag_info *);
 extern bool _cpp_save_parameter (cpp_reader *, cpp_macro *, cpp_hashnode *,
 				 cpp_hashnode *);
 extern bool _cpp_arguments_ok (cpp_reader *, cpp_macro *, const cpp_hashnode *,
@@ -635,7 +661,7 @@ extern const unsigned char *_cpp_builtin_macro_text (cpp_reader *,
 						     source_location = 0);
 extern int _cpp_warn_if_unused_macro (cpp_reader *, cpp_hashnode *, void *);
 extern void _cpp_push_token_context (cpp_reader *, cpp_hashnode *,
-				     const cpp_token *, unsigned int);
+				     const cpp_token *, unsigned int, cpp_context_htmltag_info *);
 extern void _cpp_backup_tokens_direct (cpp_reader *, unsigned int);
 
 /* In identifiers.c */

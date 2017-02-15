@@ -1508,11 +1508,12 @@ do_pragma (cpp_reader *pfile)
 	     reads both tokens, we could perhaps free it, but if it doesn't,
 	     we don't know the exact lifespan.  */
 	  cpp_token *toks = XNEWVEC (cpp_token, 2);
+	  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_PRAGMA_SRC);
 	  toks[0] = ns_token;
 	  toks[0].flags |= NO_EXPAND;
 	  toks[1] = *token;
 	  toks[1].flags |= NO_EXPAND;
-	  _cpp_push_token_context (pfile, NULL, toks, 2);
+	  _cpp_push_token_context (pfile, NULL, toks, 2, &ctxinfo);
 	}
       pfile->cb.def_pragma (pfile, pfile->directive_line);
     }
@@ -1818,6 +1819,7 @@ destringize_and_run (cpp_reader *pfile, const cpp_string *in,
   tokenrun *saved_cur_run;
   cpp_token *toks;
   int count;
+  CPP_CONTEXT_HTMLTAG_INFO(ctxinfo, CPP_CONTEXT_HTMLTAG_DESTRINGIZE_SRC);
   const struct directive *save_directive;
 
   dest = result = (char *) alloca (in->len - 1);
@@ -1924,7 +1926,7 @@ destringize_and_run (cpp_reader *pfile, const cpp_string *in,
   pfile->cur_run = saved_cur_run;
 
   /* ... inserting the new tokens we collected.  */
-  _cpp_push_token_context (pfile, NULL, toks, count);
+  _cpp_push_token_context (pfile, NULL, toks, count, &ctxinfo);
 }
 
 /* Handle the _Pragma operator.  Return 0 on error, 1 if ok.  */
