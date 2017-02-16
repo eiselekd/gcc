@@ -2723,6 +2723,7 @@ _cpp_lex_direct_real (cpp_reader *pfile)
     result->src_loc = linemap_position_for_column (pfile->line_table,
 					  CPP_BUF_COLUMN (buffer, buffer->cur));
 
+  
   switch (c)
     {
     case ' ': case '\t': case '\f': case '\v': case '\0':
@@ -3114,6 +3115,9 @@ _cpp_lex_direct_real (cpp_reader *pfile)
 					       tok_range, NULL);
     }
 
+  result->htmltag_tokid = tokid++;
+  htmltag_register_tok(pfile, result);
+  
   return result;
 }
 
@@ -3121,7 +3125,6 @@ cpp_token *
 _cpp_lex_direct (cpp_reader *pfile)
 {
   cpp_token *tok = _cpp_lex_direct_real (pfile);
-  tok->htmltag_tokid = tokid++;
   return tok;
 }
 

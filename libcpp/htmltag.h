@@ -31,6 +31,7 @@ struct htmltag_tree_context  {
 extern struct htmltag_tree *htmltag;
 extern void htmltag_revert(void) ;
 
+
 #ifdef DEBUG
 #define HTMLTAG_DEBUG(fmt,...) do { fprintf(stderr,  fmt,  ##__VA_ARGS__); fflush(stderr); } while(0)
 #else

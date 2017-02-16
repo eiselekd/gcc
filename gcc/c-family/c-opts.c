@@ -1379,8 +1379,10 @@ c_finish_options (void)
       source_location builtins_loc = BUILTINS_LOCATION;
       cpp_force_token_locations (parse_in, &builtins_loc);
 
-      cpp_init_builtins (parse_in, flag_hosted);
-      c_cpp_builtins (parse_in);
+      if (!flag_undef) {
+	cpp_init_builtins (parse_in, flag_hosted);
+	c_cpp_builtins (parse_in);
+      }
 
       cpp_stop_forcing_token_locations (parse_in);
 

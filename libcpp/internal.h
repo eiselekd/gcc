@@ -223,13 +223,27 @@ struct cpp_context
   enum context_tokens_kind tokens_kind;
 };
 
+/* in sync with ctx_to_name */
 enum cpp_context_htmltag_type {
+  /* fuction like macros:
+     + first collect arguments
+     + macro expand the arguments that are used
+     + replace args in expanded macro
+  */
+  CPP_CONTEXT_HTMLTAG_COLLECT_ARGS_SRC = 1, /*collect_args*/
+  CPP_CONTEXT_HTMLTAG_EXPAND_ARG_RESULT, /* expand_arg() */
   CPP_CONTEXT_HTMLTAG_REPLACE_ARGS_RESULT, /* replace_args() */
+
+  /* argumentless macros:
+     + replace macro identifier with definition
+  */
   CPP_CONTEXT_HTMLTAG_REPLACE_RESULT, /* enter_macro_context.paramc==0 */
   CPP_CONTEXT_HTMLTAG_REPLACE_PRAGMA_RESULT, /* enter_macro_context pragma */
+  
+  /* result of buildin macro */
+  CPP_CONTEXT_HTMLTAG_BUILDIN_RESULT, /* enter_macro_context.isbuildin, builtin_macro() */
+  
   CPP_CONTEXT_HTMLTAG_PASTE_RESULT, /* paste_all_tokens() */
-  CPP_CONTEXT_HTMLTAG_BUILDIN_RESULT, /* builtin_macro() */
-  CPP_CONTEXT_HTMLTAG_EXPAND_ARG_SRC, /* expand_arg() */
   CPP_CONTEXT_HTMLTAG_WHITESPACE, /* cpp_get_token_1() */
   CPP_CONTEXT_HTMLTAG_FUNLIKE_PADDING, /* funlike_invocation_p() */
   CPP_CONTEXT_HTMLTAG_PRAGMA_SRC, /* do_pragma() */
@@ -244,10 +258,22 @@ typedef struct cpp_context_htmltag_info
 {
   int context_id;
   int context_type;
+  int iscopy;
+  union {
+    struct {
+      int macroid;
+      int tokenid;
+      int argidx;
+    } macro;
+  } u;
 } cpp_context_htmltag_info;
 
 extern int context_idrun;
-#define CPP_CONTEXT_HTMLTAG_INFO(n, typ) cpp_context_htmltag_info n = { context_idrun++, typ };
+#define CPP_CONTEXT_HTMLTAG_INFO(n, typ) cpp_context_htmltag_info n = { context_idrun++, typ, 0, { {0,0,0} } };
+#define CPP_CONTEXT_HTMLTAG_INFO_ID(n, ctxid, typ) cpp_context_htmltag_info n = { ctxid, typ, 0, { {0,0,0} } };
+#define CPP_CONTEXT_HTMLTAG_INFO_SET(n, typ)  (n)->context_type = typ; 
+#define CPP_CONTEXT_HTMLTAG_INFO_MACRO(n, typ, macroid, tokenid) cpp_context_htmltag_info n = { context_idrun++, typ, 0, { { macroid, tokenid, 0} } };
+#define CPP_CONTEXT_HTMLTAG_INFO_ARGIDX(n, idx)  (n)->u.macro.argidx = idx; 
   
 struct lexer_state
 {
@@ -919,6 +945,13 @@ int linemap_get_expansion_line (struct line_maps *,
    SET is the line map set LOCATION comes from.  */
 const char* linemap_get_expansion_filename (struct line_maps *,
 					    source_location);
+
+
+extern void htmltag_clone_context_prange(cpp_reader *pfile, const cpp_token **ptok , int cnt, cpp_context_htmltag_info *info);
+extern void htmltag_clone_context_range(cpp_reader *pfile, const cpp_token *tok , int cnt, cpp_context_htmltag_info *info);
+
+
+extern int tokid;
 
 #ifdef __cplusplus
 }

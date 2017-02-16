@@ -25,5 +25,5 @@ i:
 
 
 test:
-	/opt/gcc-$(GCC-PINFO-VERSION)/bin/gcc-pinfo -fparse-info=t/m.pinfo -c t/m.c -o t/m.o
+	/opt/gcc-$(GCC-PINFO-VERSION)/bin/gcc-pinfo -fparse-info=t/m.pinfo -undef -nostdinc -c t/m.c -o t/m.o
 

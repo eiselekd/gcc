@@ -403,8 +403,6 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
   tok = cpp_get_token_with_location (parse_in, loc);
   type = tok->type;
 
-  c_lex_outtoken(parse_in, tok);
-  
  retry_after_at:
   switch (type)
     {
