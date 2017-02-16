@@ -61,4 +61,5 @@ GSYMS
 GTAGS
 a.out
 build/
-					        
+*.pinfo
+
