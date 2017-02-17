@@ -66,3 +66,8 @@ build/
 autoconf-2.64.tar.bz2
 automake-1.11.tar.bz2
 build-autoconfig/
+autoconf-2.64.tar.bz2.1
+autoconf-2.64/
+automake-1.11/
+libcpp/pinfo.so
+pinfo.so
