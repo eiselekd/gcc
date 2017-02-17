@@ -1,41 +1,24 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Profile view</title>
+    <title>Htmltag view</title>
     <link href="/static/styles.css" media="screen" rel="stylesheet" type="text/css">
     <link href="/static/jquery-ui-1.12.1/jquery-ui.css" media="screen" rel="stylesheet" type="text/css">
     <link href="/static/jquery.contextMenu.css" media="screen" rel="stylesheet" type="text/css">
     
-    <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.10/d3.min.js"></script>
-    <script src="https://d3js.org/d3-timer.v1.min.js"></script>
     <script src="/static/jquery-ui-1.12.1/external/jquery/jquery.js"></script>
     <script src="/static/jquery-ui-1.12.1/jquery-ui.js"></script>
     <script src="/static/jquery.ui.position.js"></script>
     <script src="/static/jquery.contextMenu.js"></script>
     <script src="/static/base64.js"></script>
     <script src="/static/websocket.js"></script>
-    <script src="/static/force.js"></script>
   </head>
   <body>
     <div id="maingraph" >
-      <svg id="graph">
-	<defs>
-        <!-- from http://www.w3.org/TR/SVG/painting.html#Markers -->
-        <!-- Increasing refX moves the marker away from the end of the line -->
-        <marker id="Triangle"
-                viewBox="0 0 10 10" refX="30" refY="5"
-                markerUnits="strokeWidth"
-                markerWidth="4" markerHeight="3"
-                orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" />
-        </marker>
-	</defs>
-      </svg>
     </div>
+
     <script>fetchData("{{url_escape(filename)}}")</script>
     <input id="cmdinput" type="text" value="" style="width: 1200px;border-style: solid; border-width: 1px 1px 1px 1px;margin-right: 10px;">
-
-  
 
     
   </body>

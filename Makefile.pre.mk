@@ -47,3 +47,7 @@ ve:
 apt:
 	sudo apt-get install python-pip
 	sudo pip install tornado
+
+pinfo:
+	cd libcpp; rm -rf build pinfo.so;  \
+		python setup.py build_ext --inplace; 
