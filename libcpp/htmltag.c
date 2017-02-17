@@ -2,6 +2,25 @@
 #include "system.h"
 #include "htmltag.h"
 
+#define MAX_PATH 260
+
+/***********************************/
+/* options */
+
+struct option_value_info
+{
+  const char *const name;	/* the name of the value */
+  const int value;		/* the value of the name */
+};
+
+static const struct option_value_info dump_options[] =
+{
+  {"skipping", HDT_DUMP_SKIPPING}
+};
+
+
+/***********************************/
+/* mem mgmt */
 static int isreverted = 0;
 struct htmltag_tree *htmltag = 0;
 
@@ -21,6 +40,12 @@ struct htmltag_tree *htmltag_alloc(enum htmltag_type typ) {
     h = (struct htmltag_tree *)ctx;
     break;
   }
+  case HTMLTAG_DIRECTIVE: {
+    struct htmltag_tree_directive *ctx;
+    ctx = (struct htmltag_tree_directive *) XCNEW(struct htmltag_tree_directive);
+    h = (struct htmltag_tree *)ctx;
+    break;
+  }
   default:
     while(1) {};
     break;
@@ -32,13 +57,6 @@ struct htmltag_tree *htmltag_alloc(enum htmltag_type typ) {
   return h;
 }
 
-void htmltag_register_tok(cpp_reader *pfile, const cpp_token *tok)
-{
-  struct htmltag_tree_token *h;
-  (void) pfile;
-  h = (struct htmltag_tree_token *)htmltag_alloc(HTMLTAG_TOKEN);
-  h->tok = *tok;
-}
 
 cpp_context *htmltag_clone_context(cpp_reader *pfile, const cpp_context *ctx)
 {
@@ -76,19 +94,10 @@ cpp_context *htmltag_clone_context(cpp_reader *pfile, const cpp_context *ctx)
   return c;
 }
 
-void htmltag_register_token_context(cpp_reader *pfile, const cpp_context *ctx, cpp_context_htmltag_info *info)
-{
-  struct htmltag_tree_context *h;
-  (void) pfile;
-  h = (struct htmltag_tree_context *)htmltag_alloc(HTMLTAG_CONTEXT);
-  h->ctx = htmltag_clone_context(pfile, ctx);
-  h->info = *info;
-}
-
 void htmltag_clone_context_prange(cpp_reader *pfile, const cpp_token **ptok , int cnt, cpp_context_htmltag_info *info)
 {
   int i;
-  cpp_context *c; const cpp_token **it = ptok;cpp_token *cpy; 
+  cpp_context *c; const cpp_token **it = ptok;cpp_token *cpy;
   struct htmltag_tree_context *h;
   (void) pfile;
   h = (struct htmltag_tree_context *)htmltag_alloc(HTMLTAG_CONTEXT);
@@ -96,13 +105,13 @@ void htmltag_clone_context_prange(cpp_reader *pfile, const cpp_token **ptok , in
   memset (c, 0, sizeof (cpp_context));
   c->tokens_kind = TOKENS_KIND_DIRECT;
   cpy = XNEWVEC(cpp_token , cnt);
-  
+
   for (i = 0; i < cnt; it++, i++) {
     cpy[i] = **it;
   }
   FIRST (c).token = cpy;
   LAST (c).token = cpy + cnt;
-  
+
   h->ctx = c;
   h->info = *info;
 }
@@ -110,7 +119,7 @@ void htmltag_clone_context_prange(cpp_reader *pfile, const cpp_token **ptok , in
 void htmltag_clone_context_range(cpp_reader *pfile, const cpp_token *tok , int cnt, cpp_context_htmltag_info *info)
 {
   int i;
-  cpp_context *c; const cpp_token *it = tok;cpp_token *cpy; 
+  cpp_context *c; const cpp_token *it = tok;cpp_token *cpy;
   struct htmltag_tree_context *h;
   (void) pfile;
   h = (struct htmltag_tree_context *)htmltag_alloc(HTMLTAG_CONTEXT);
@@ -118,15 +127,55 @@ void htmltag_clone_context_range(cpp_reader *pfile, const cpp_token *tok , int c
   memset (c, 0, sizeof (cpp_context));
   c->tokens_kind = TOKENS_KIND_DIRECT;
   cpy = XNEWVEC(cpp_token , cnt);
-  
+
   for (i = 0; i < cnt; it++, i++) {
     cpy[i] = *it;
   }
   FIRST (c).token = cpy;
   LAST (c).token = cpy + cnt;
-  
+
   h->ctx = c;
   h->info = *info;
+}
+
+/*******************************************/
+/* registration routines */
+
+void htmltag_register_tok(cpp_reader *pfile, const cpp_token *tok)
+{
+  struct htmltag_tree_token *h;
+  (void) pfile;
+  if (!HTMLTAG_IS_ENABLED(pfile))
+    return;
+
+  h = (struct htmltag_tree_token *)htmltag_alloc(HTMLTAG_TOKEN);
+  h->tok = *tok;
+  h->skipping = pfile->state.skipping;
+}
+
+void htmltag_register_token_context(cpp_reader *pfile, const cpp_context *ctx, cpp_context_htmltag_info *info)
+{
+  struct htmltag_tree_context *h;
+  (void) pfile;
+
+  if (!HTMLTAG_IS_ENABLED(pfile))
+    return;
+
+  h = (struct htmltag_tree_context *)htmltag_alloc(HTMLTAG_CONTEXT);
+  h->ctx = htmltag_clone_context(pfile, ctx);
+  h->info = *info;
+}
+
+void htmltag_register_directive(cpp_reader *pfile, int dir_no, const cpp_token *dname)
+{
+  struct htmltag_tree_directive *h;
+  (void) pfile; (void)dname;
+
+  if (!HTMLTAG_IS_ENABLED(pfile))
+    return;
+
+  h = (struct htmltag_tree_directive *)htmltag_alloc(HTMLTAG_DIRECTIVE);
+  h->dir_no = dir_no;
 }
 
 
@@ -151,7 +200,7 @@ static const char *ctx_to_name[32] = {
   "AC", /*collect_args*/
   "AE", /* expand_arg() */
   "MF", /* replace_args() */
-  
+
   /* argumentless macros:
      + replace macro identifier with definition
   */
@@ -160,20 +209,79 @@ static const char *ctx_to_name[32] = {
 
   /* buildin macro result */
   "BR", /* builtin_macro() */
-  
+
   "PP", /* paste_all_tokens() */
   "ws", /* cpp_get_token_1() */
   "pp", /* funlike_invocation_p() */
   "pr", /* do_pragma() */
   "st", /* destringize_and_run() */
-  
+
   "b_", /* traditionsl.c:_cpp_scan_out_logical_line() */
   "r_", /* traditoinsl.c: push_replacement_text() */
   "a_" /* traditional.c: replace_args_and_p */
 };
 
-void htmltag_dump_tok(cpp_reader *pfile, FILE *f, const cpp_token *tok) {
+#define LOCATION_LOCUS(LOC) \
+  ((IS_ADHOC_LOC (LOC)) ? get_location_from_adhoc_loc (pfile->line_table, LOC) \
+   : (LOC))
+
+/* A value which will never be used to represent a real location.  */
+#define UNKNOWN_LOCATION ((source_location) 0)
+
+/* The location for declarations in "<built-in>" */
+#define BUILTINS_LOCATION ((source_location) 1)
+
+
+static expanded_location
+expand_location_1 (cpp_reader *pfile, source_location loc,
+		   bool expansion_point_p)
+{
+  expanded_location xloc;
+  const line_map_ordinary *map;
+  enum location_resolution_kind lrk = LRK_MACRO_EXPANSION_POINT;
+
+  if (IS_ADHOC_LOC (loc))
+    {
+      loc = LOCATION_LOCUS (loc);
+    }
+
+  memset (&xloc, 0, sizeof (xloc));
+
+  if (loc >= RESERVED_LOCATION_COUNT)
+    {
+      if (!expansion_point_p)
+	{
+	  /* We want to resolve LOC to its spelling location.
+
+	     But if that spelling location is a reserved location that
+	     appears in the context of a macro expansion (like for a
+	     location for a built-in token), let's consider the first
+	     location (toward the expansion point) that is not reserved;
+	     that is, the first location that is in real source code.  */
+	  loc = linemap_unwind_to_first_non_reserved_loc (pfile->line_table,
+							  loc, NULL);
+	  lrk = LRK_SPELLING_LOCATION;
+	}
+      loc = linemap_resolve_location (pfile->line_table, loc,
+				      lrk, &map);
+      xloc = linemap_expand_location (pfile->line_table, map, loc);
+    }
+
+  if (loc <= BUILTINS_LOCATION)
+    xloc.file = loc == UNKNOWN_LOCATION ? NULL : _("<built-in>");
+
+  return xloc;
+}
+
+struct dump_ctx {
+  char p[MAX_PATH];
+
+};
+
+void htmltag_dump_tok(struct dump_ctx *ctx, cpp_reader *pfile, FILE *f, const cpp_token *tok) {
   const char *paste = tok->flags & PASTE_LEFT ? ":p" : "";
+  (void) ctx;
+
   if (!cpp_is_spellable(tok)) {
     switch(tok->type) {
     case CPP_MACRO_ARG:
@@ -185,7 +293,7 @@ void htmltag_dump_tok(cpp_reader *pfile, FILE *f, const cpp_token *tok) {
     case CPP_PRAGMA_EOL:
       fprintf(f, "(<pragmaeol %s>)", paste);
       break;
-      
+
     case CPP_PADDING:
       fprintf(f, "(<pad %s>)", paste);
       break;
@@ -200,7 +308,7 @@ void htmltag_dump_tok(cpp_reader *pfile, FILE *f, const cpp_token *tok) {
 }
 
 
-void htmltag_dump_rec(cpp_reader *pfile, FILE *f, struct htmltag_tree *p, int cnt)
+void htmltag_dump_rec(struct dump_ctx *dctx, cpp_reader *pfile, FILE *f, struct htmltag_tree *p, int cnt)
 {
   while (p) {
     int i;
@@ -209,19 +317,24 @@ void htmltag_dump_rec(cpp_reader *pfile, FILE *f, struct htmltag_tree *p, int cn
     }
     switch(p->type) {
     case HTMLTAG_TOKEN: {
+      struct htmltag_tree_token *tok = (struct htmltag_tree_token *)p;
       const cpp_token *token = &(((struct htmltag_tree_token *)p)->tok);
-      if (!cpp_is_spellable(token)) {
-      } else {
-	fprintf(f, "T.%d:%s\n", token->htmltag_tokid, cpp_token_as_text (pfile, token));
+      expanded_location e = expand_location_1(pfile, token->src_loc, true);
+      if (strcmp(dctx->p, e.file)) {
+	fprintf(f, "L.%s\n", e.file);
+	strncpy(dctx->p, e.file, MAX_PATH-1);
       }
+      fprintf(f, "%c.%d:%d:%d:", tok->skipping ? 't' : 'T', token->htmltag_tokid,e.line,e.column);
+      htmltag_dump_tok(dctx, pfile, f, token);
+      fprintf(f,"\n");
       break;
     }
     case HTMLTAG_CONTEXT: {
-      const cpp_token *it; 
+      const cpp_token *it;
       struct htmltag_tree_context *h = (struct htmltag_tree_context *)p;
       cpp_context *ctx = h->ctx;
       fprintf(f,"C.%s.%d", ctx_to_name[h->info.context_type], h->info.context_id);
-      
+
       switch(h->info.context_type) {
       case CPP_CONTEXT_HTMLTAG_BUILDIN_RESULT:
 	fprintf(f,",t:%d",h->info.u.macro.macroid);
@@ -244,16 +357,25 @@ void htmltag_dump_rec(cpp_reader *pfile, FILE *f, struct htmltag_tree *p, int cn
 	  fprintf(f, "%d<-%d ", it->htmltag_tokid, it->htmltag_origid);
 	} else {
 	  fprintf(f, "%d", it->htmltag_tokid);
-	  htmltag_dump_tok(pfile, f, it);
+	  htmltag_dump_tok(dctx, pfile, f, it);
 	  fprintf(f, " ");
 	}
       }
       fprintf(f, "]\n");
     }
       break;
+    case HTMLTAG_DIRECTIVE: {
+      struct htmltag_tree_directive *h = (struct htmltag_tree_directive *)p;
+      const char *n = _cpp_directive_name (h->dir_no);
+      fprintf(f, "D.%s\n", n);
+    }
+      break;
+      
+    default:
+      break;
     }
     if (p->childs) {
-      htmltag_dump_rec(pfile, f, p->childs, cnt+1);
+      htmltag_dump_rec(dctx, pfile, f, p->childs, cnt+1);
     }
     p = p->n;
   }
@@ -262,8 +384,10 @@ void htmltag_dump_rec(cpp_reader *pfile, FILE *f, struct htmltag_tree *p, int cn
 void htmltag_dump(cpp_reader *pfile, FILE *f)
 {
   struct htmltag_tree *p;
+  struct dump_ctx ctx;
+  memset(&ctx, 0, sizeof(ctx));
   htmltag_revert();
   p = htmltag;
   fprintf(f, "Trace:\n");
-  htmltag_dump_rec(pfile, f, p, 0);
+  htmltag_dump_rec(&ctx, pfile, f, p, 0);
 }

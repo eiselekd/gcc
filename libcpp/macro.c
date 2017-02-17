@@ -1952,12 +1952,14 @@ next_context (cpp_reader *pfile)
   return result;
 }
 
+
 /* Push a list of pointers to tokens.  */
 static void
 push_ptoken_context (cpp_reader *pfile, cpp_hashnode *macro, _cpp_buff *buff,
 		     const cpp_token **first, unsigned int count, cpp_context_htmltag_info *info, int copy_tokens)
 {
-  if (copy_tokens && info) {
+  (void)copy_tokens;
+  if (copy_tokens && info && HTMLTAG_IS_ENABLED(pfile)) {
     unsigned int i; const cpp_token **pit;cpp_token  *cpy;
     cpp_context_htmltag_info _info = *info;
     _info.iscopy = 1;
@@ -2010,7 +2012,8 @@ _cpp_push_token_context (cpp_reader *pfile, cpp_hashnode *macro,
    FIRST (context).token = first;
    LAST (context).token = first + count;
 
-   htmltag_register_token_context(pfile, context, info);
+   if (HTMLTAG_IS_ENABLED(pfile))
+     htmltag_register_token_context(pfile, context, info);
 
 }
 
@@ -2052,7 +2055,7 @@ push_extended_tokens_context (cpp_reader *pfile,
   FIRST (context).ptoken = first;
   LAST (context).ptoken = first + count;
 
-  if (info)
+  if (info && HTMLTAG_IS_ENABLED(pfile))
     htmltag_register_token_context(pfile, context, info);
 
 }

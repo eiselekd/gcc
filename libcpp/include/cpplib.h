@@ -271,7 +271,7 @@ struct GTY(()) cpp_token {
 
 #ifdef HTMLTAG_ENABLE
   int htmltag_tokid, htmltag_origid;
-  struct cpp_macro *htmltag_macro;
+  //struct cpp_macro *htmltag_macro;
 #endif
 };
 
@@ -556,10 +556,12 @@ struct cpp_options
   struct htmltag_options_{
 
     FILE *dump;
-
+    int enabled;
   } htmltag;
 
 };
+
+#define HTMLTAG_IS_ENABLED(pfile) cpp_get_options(pfile)->htmltag.enabled
 
 /* Callback for header lookup for HEADER, which is the name of a
    source file.  It is used as a method of last resort to find headers
@@ -1217,6 +1219,7 @@ typedef struct cpp_context cpp_context;
 typedef struct cpp_context_htmltag_info cpp_context_htmltag_info;
 extern void htmltag_register_tok(cpp_reader *pfile, const cpp_token *);
 extern void htmltag_register_token_context(cpp_reader *pfile, const cpp_context *, cpp_context_htmltag_info *);
+extern void htmltag_register_directive(cpp_reader *pfile, int dir_no, const cpp_token *dname);
 extern void htmltag_dump(cpp_reader *pfile, FILE *f);
 
 #endif /* ! LIBCPP_CPPLIB_H */

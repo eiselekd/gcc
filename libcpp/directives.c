@@ -210,6 +210,12 @@ static const directive linemarker_dir =
 
 #define SEEN_EOL() (pfile->cur_token[-1].type == CPP_EOF)
 
+/* return name of directive */
+const char* _cpp_directive_name (int dir_no)
+{
+  return (dir_no >= 0) ? directive_names[dir_no] : "<undef>";
+}
+
 /* Skip any remaining tokens in a directive.  */
 static void
 skip_rest_of_line (cpp_reader *pfile)
@@ -424,7 +430,7 @@ _cpp_handle_directive (cpp_reader *pfile, int indented)
   const cpp_token *dname;
   bool was_parsing_args = pfile->state.parsing_args;
   bool was_discarding_output = pfile->state.discarding_output;
-  int skip = 1;
+  int skip = 1, dir_no = -1;
 
   if (was_discarding_output)
     pfile->state.prevent_expansion = 0;
@@ -443,7 +449,7 @@ _cpp_handle_directive (cpp_reader *pfile, int indented)
   if (dname->type == CPP_NAME)
     {
       if (dname->val.node.node->is_directive)
-	dir = &dtable[dname->val.node.node->directive_index];
+	dir = &dtable[(dir_no = dname->val.node.node->directive_index)];
     }
   /* We do not recognize the # followed by a number extension in
      assembler code.  */
@@ -549,6 +555,9 @@ _cpp_handle_directive (cpp_reader *pfile, int indented)
     _cpp_backup_tokens (pfile, 1);
 
   end_directive (pfile, skip);
+
+  htmltag_register_directive(pfile, dir_no, dname);
+  
   if (was_parsing_args && !pfile->state.in_deferred_pragma)
     {
       /* Restore state when within macro args.  */
@@ -578,6 +587,9 @@ run_directive (cpp_reader *pfile, int dir_no, const char *buf, size_t count)
     prepare_directive_trad (pfile);
   pfile->directive->handler (pfile);
   end_directive (pfile, 1);
+
+  htmltag_register_directive(pfile, dir_no, 0);
+  
   _cpp_pop_buffer (pfile);
 }
 

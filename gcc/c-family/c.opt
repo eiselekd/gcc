@@ -1802,6 +1802,13 @@ include
 C ObjC C++ ObjC++ Joined Separate MissingArgError(missing filename after %qs)
 -include <file>	Include the contents of <file> before other files.
 
+fparse-info
+Common Separate Var(parse_info_file_name)
+-fparse-info <file>	Emit parseinfo information into <file>.
+
+fparse-info=
+Common Joined Alias(fparse-info)
+
 iprefix
 C ObjC C++ ObjC++ Joined Separate
 -iprefix <path>	Specify <path> as a prefix for next two options.
