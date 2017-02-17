@@ -103,7 +103,7 @@ static void push_conditional (cpp_reader *, int, int, const cpp_hashnode *);
 static unsigned int read_flag (cpp_reader *, unsigned int);
 static bool strtolinenum (const uchar *, size_t, linenum_type *, bool *);
 static void do_diagnostic (cpp_reader *, int, int, int);
-static cpp_hashnode *lex_macro_node (cpp_reader *, bool);
+static cpp_hashnode *lex_macro_node (cpp_reader *, bool, const cpp_token **);
 static int undefine_macros (cpp_reader *, cpp_hashnode *, void *);
 static void do_include_common (cpp_reader *, enum include_type);
 static struct pragma_entry *lookup_pragma_entry (struct pragma_entry *,
@@ -598,9 +598,11 @@ run_directive (cpp_reader *pfile, int dir_no, const char *buf, size_t count)
    processing a #define or #undefine directive, and false
    otherwise.  */
 static cpp_hashnode *
-lex_macro_node (cpp_reader *pfile, bool is_def_or_undef)
+lex_macro_node (cpp_reader *pfile, bool is_def_or_undef, const cpp_token **ptok)
 {
   const cpp_token *token = _cpp_lex_token (pfile);
+  if (ptok)
+    *ptok = token;
 
   /* The token immediately after #define must be an identifier.  That
      identifier may not be "defined", per C99 6.10.8p4.
@@ -641,7 +643,8 @@ lex_macro_node (cpp_reader *pfile, bool is_def_or_undef)
 static void
 do_define (cpp_reader *pfile)
 {
-  cpp_hashnode *node = lex_macro_node (pfile, true);
+  const cpp_token *token;
+  cpp_hashnode *node = lex_macro_node (pfile, true, &token);
 
   if (node)
     {
@@ -653,7 +656,7 @@ do_define (cpp_reader *pfile)
       if (pfile->cb.before_define)
 	pfile->cb.before_define (pfile);
 
-      if (_cpp_create_definition (pfile, node))
+      if (_cpp_create_definition (pfile, node, token))
 	if (pfile->cb.define)
 	  pfile->cb.define (pfile, pfile->directive_line, node);
 
@@ -665,7 +668,8 @@ do_define (cpp_reader *pfile)
 static void
 do_undef (cpp_reader *pfile)
 {
-  cpp_hashnode *node = lex_macro_node (pfile, true);
+  const cpp_token *token;
+  cpp_hashnode *node = lex_macro_node (pfile, true, &token);
 
   if (node)
     {
@@ -1966,7 +1970,8 @@ do_ifdef (cpp_reader *pfile)
 
   if (! pfile->state.skipping)
     {
-      cpp_hashnode *node = lex_macro_node (pfile, false);
+      const cpp_token *token;
+      cpp_hashnode *node = lex_macro_node (pfile, false, &token);
 
       if (node)
 	{
@@ -2012,7 +2017,8 @@ do_ifndef (cpp_reader *pfile)
 
   if (! pfile->state.skipping)
     {
-      node = lex_macro_node (pfile, false);
+      const cpp_token *token;
+      node = lex_macro_node (pfile, false, &token);
 
       if (node)
 	{
@@ -2551,7 +2557,7 @@ cpp_pop_definition (cpp_reader *pfile, struct def_pragma_macro *c)
       {
 	_cpp_clean_line (pfile);
 	nbuf->sysp = 1;
-	if (!_cpp_create_definition (pfile, h))
+	if (!_cpp_create_definition (pfile, h, 0))
 	  abort ();
 	_cpp_pop_buffer (pfile);
       }

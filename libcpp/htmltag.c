@@ -218,7 +218,10 @@ static const char *ctx_to_name[32] = {
 
   "b_", /* traditionsl.c:_cpp_scan_out_logical_line() */
   "r_", /* traditoinsl.c: push_replacement_text() */
-  "a_" /* traditional.c: replace_args_and_p */
+  "a_", /* traditional.c: replace_args_and_p */
+
+  "_d" /* create_iso_definition() */
+  
 };
 
 #define LOCATION_LOCUS(LOC) \
@@ -343,6 +346,7 @@ void htmltag_dump_rec(struct dump_ctx *dctx, cpp_reader *pfile, FILE *f, struct 
       case CPP_CONTEXT_HTMLTAG_EXPAND_ARG_RESULT:
 	fprintf(f,",{%d}",h->info.u.macro.argidx);
 	break;
+      case CPP_CONTEXT_HTMLTAG_DEFINE:
       case CPP_CONTEXT_HTMLTAG_REPLACE_RESULT:
       case CPP_CONTEXT_HTMLTAG_REPLACE_ARGS_RESULT:
 	fprintf(f,",t:%d,m:%d",h->info.u.macro.tokenid, h->info.u.macro.macroid);
@@ -353,13 +357,14 @@ void htmltag_dump_rec(struct dump_ctx *dctx, cpp_reader *pfile, FILE *f, struct 
       }
       fprintf(f,":[");
       for (it = FIRST (ctx).token; it < LAST (ctx).token; it++) {
-	if (h->info.iscopy) {
+	if ((it->htmltag_tokid != it->htmltag_origid)) {
 	  fprintf(f, "%d<-%d ", it->htmltag_tokid, it->htmltag_origid);
 	} else {
 	  fprintf(f, "%d", it->htmltag_tokid);
-	  htmltag_dump_tok(dctx, pfile, f, it);
-	  fprintf(f, " ");
 	}
+	htmltag_dump_tok(dctx, pfile, f, it);
+	fprintf(f, " ");
+	
       }
       fprintf(f, "]\n");
     }

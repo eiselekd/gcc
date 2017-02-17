@@ -980,6 +980,8 @@ c_common_post_options (const char **pfilename)
     cpp_opts = cpp_get_options (parse_in);
     cpp_opts->htmltag.enabled = 1;
     cpp_opts->htmltag.dump = fopen(parse_info_file_name, "w");
+  } else {
+    cpp_opts->htmltag.enabled = 1;
   }
 
   if (flag_preprocess_only)

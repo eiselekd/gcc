@@ -252,6 +252,9 @@ enum cpp_context_htmltag_type {
   CPP_CONTEXT_HTMLTAG_TRADITIONAL_BUILDIN, /* traditionsl.c:_cpp_scan_out_logical_line() */
   CPP_CONTEXT_HTMLTAG_TRADITIONAL_REPLACEMENT, /* traditoinsl.c: push_replacement_text() */
   CPP_CONTEXT_HTMLTAG_TRADITIONAL_ARGS_RESULT, /* traditional.c: replace_args_and_push() */
+
+  CPP_CONTEXT_HTMLTAG_DEFINE, /* create_iso_definition() */
+  
 };
 
 typedef struct cpp_context_htmltag_info
@@ -674,7 +677,7 @@ cpp_in_primary_file (cpp_reader *pfile)
 
 /* In macro.c */
 extern void _cpp_free_definition (cpp_hashnode *);
-extern bool _cpp_create_definition (cpp_reader *, cpp_hashnode *);
+extern bool _cpp_create_definition (cpp_reader *, cpp_hashnode *, const cpp_token *);
 extern void _cpp_pop_context (cpp_reader *);
 extern void _cpp_push_text_context (cpp_reader *, cpp_hashnode *,
 				    const unsigned char *, size_t, cpp_context_htmltag_info *);

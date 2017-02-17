@@ -37,7 +37,12 @@ ia:
 
 test:
 	/opt/gcc-$(GCC-PINFO-VERSION)/bin/gcc-pinfo -fparse-info=t/m.pinfo -undef -nostdinc -c t/m.c -o t/m.o
+	/opt/gcc-$(GCC-PINFO-VERSION)/bin/gcc-pinfo -fparse-info=t/m.ftrack-macro-expansion.pinfo -undef -nostdinc -ftrack-macro-expansion=0 -c t/m.c -o t/m.o
 	/opt/gcc-$(GCC-PINFO-VERSION)/bin/g++-pinfo -Ibuild/build-x86_64-linux-gnu/libcpp -Ilibcpp -I. -Ilibcpp/../include -Ilibcpp/include  -g -O2 -W -Wall -Wno-narrowing -Wwrite-strings -Wmissing-format-attribute -pedantic -Wno-long-long  -fno-exceptions -fno-rtti -Ilibcpp -I. -Ilibcpp/../include -Ilibcpp/include  -fparse-info=t/macro.pinfo -c -o t/macro.o libcpp/macro.c
+	/opt/gcc-$(GCC-PINFO-VERSION)/bin/g++-pinfo -Ibuild/build-x86_64-linux-gnu/libcpp -Ilibcpp -I. -Ilibcpp/../include -Ilibcpp/include  -g -O2 -W -Wall -Wno-narrowing -Wwrite-strings -Wmissing-format-attribute -pedantic -Wno-long-long  -fno-exceptions -fno-rtti -Ilibcpp -I. -Ilibcpp/../include -Ilibcpp/include  -fparse-info=t/macro.ftrack-macro-expansion.pinfo -ftrack-macro-expansion=0 -c -o t/macro.o libcpp/macro.c
+
+
+
 
 #--param ggc-min-expand=0 --param ggc-min-heapsize=0
 
@@ -54,6 +59,8 @@ apt:
 pinfo:
 	cd libcpp; rm -rf build pinfo.so;  \
 		python setup.py build_ext --inplace; 
+
+
 
 
 a:

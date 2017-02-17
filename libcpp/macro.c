@@ -102,7 +102,7 @@ static void push_ptoken_context (cpp_reader *, cpp_hashnode *, _cpp_buff *,
 				 const cpp_token **, unsigned int, cpp_context_htmltag_info *, int);
 static void push_extended_tokens_context (cpp_reader *, cpp_hashnode *,
 					  _cpp_buff *, source_location *,
-					  const cpp_token **, unsigned int, cpp_context_htmltag_info *);
+					  const cpp_token **, unsigned int, cpp_context_htmltag_info *, int);
 static _cpp_buff *collect_args (cpp_reader *, const cpp_hashnode *,
 				_cpp_buff **, unsigned *, cpp_context_htmltag_info *);
 static cpp_context *next_context (cpp_reader *);
@@ -160,7 +160,7 @@ static void replace_args (cpp_reader *, cpp_hashnode *, cpp_macro *,
 			  macro_arg *, source_location, cpp_context_htmltag_info * );
 static _cpp_buff *funlike_invocation_p (cpp_reader *, cpp_hashnode *,
 					_cpp_buff **, unsigned *, cpp_context_htmltag_info * );
-static bool create_iso_definition (cpp_reader *, cpp_macro *);
+static bool create_iso_definition (cpp_reader *, cpp_macro *, const cpp_token *token);
 
 /* #define directive parsing and handling.  */
 
@@ -484,7 +484,7 @@ builtin_macro (cpp_reader *pfile, cpp_hashnode *node,
 			    map, /*macro_token_index=*/0);
       push_extended_tokens_context (pfile, node, token_buf, virt_locs,
 				    (const cpp_token **)token_buf->base,
-				    1, ctxinfo);
+				    1, ctxinfo, 0);
     }
   else
     _cpp_push_token_context (pfile, NULL, token, 1, ctxinfo);
@@ -753,7 +753,7 @@ paste_all_tokens (cpp_reader *pfile, const cpp_token *lhs)
 			     virt_loc, 0, NULL, 0);
       push_extended_tokens_context (pfile, context->c.mc->macro_node,
 				    token_buf, virt_locs,
-				    (const cpp_token **)token_buf->base, 1, &ctxinfo);
+				    (const cpp_token **)token_buf->base, 1, &ctxinfo, 0);
     }
   else
     _cpp_push_token_context (pfile, NULL, lhs, 1, &ctxinfo);
@@ -1223,7 +1223,7 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
 					    virt_locs,
 					    (const cpp_token **)
 					    macro_tokens->base,
-					    tokens_count, &ctxinfo);
+					    tokens_count, &ctxinfo, 0);
 	    }
 	  else
 	    _cpp_push_token_context (pfile, node, macro->exp.tokens,
@@ -1909,7 +1909,7 @@ replace_args (cpp_reader *pfile, cpp_hashnode *node, cpp_macro *macro,
   
   if (track_macro_exp)
     push_extended_tokens_context (pfile, node, buff, virt_locs, first,
-				  tokens_buff_count (buff), ctxinfo);
+				  tokens_buff_count (buff), ctxinfo, 1);
   else
     push_ptoken_context (pfile, node, buff, first,
 			 tokens_buff_count (buff), ctxinfo, 1);
@@ -1963,8 +1963,8 @@ push_ptoken_context (cpp_reader *pfile, cpp_hashnode *macro, _cpp_buff *buff,
     unsigned int i; const cpp_token **pit;cpp_token  *cpy;
     cpp_context_htmltag_info _info = *info;
     _info.iscopy = 1;
-    
-    cpy = XNEWVEC(cpp_token , count);
+
+    cpy = XNEWVEC(cpp_token, count);
     for (i = 0, pit = first; i < count; pit++, i++) {
       cpy[i] = **pit;
       cpy[i].htmltag_origid = cpy[i].htmltag_tokid;
@@ -1984,7 +1984,7 @@ push_ptoken_context (cpp_reader *pfile, cpp_hashnode *macro, _cpp_buff *buff,
   FIRST (context).ptoken = first;
   LAST (context).ptoken = first + count;
 
-  if (info)
+  if (info && HTMLTAG_IS_ENABLED(pfile))
     htmltag_register_token_context(pfile, context, info);
   
 }
@@ -2012,7 +2012,7 @@ _cpp_push_token_context (cpp_reader *pfile, cpp_hashnode *macro,
    FIRST (context).token = first;
    LAST (context).token = first + count;
 
-   if (HTMLTAG_IS_ENABLED(pfile))
+   if (info && HTMLTAG_IS_ENABLED(pfile))
      htmltag_register_token_context(pfile, context, info);
 
 }
@@ -2034,7 +2034,7 @@ push_extended_tokens_context (cpp_reader *pfile,
 			      _cpp_buff *token_buff,
 			      source_location *virt_locs,
 			      const cpp_token **first,
-			      unsigned int count, cpp_context_htmltag_info *info)
+			      unsigned int count, cpp_context_htmltag_info *info, int copy)
 {
   cpp_context *context;
   macro_context *m;
@@ -2046,7 +2046,15 @@ push_extended_tokens_context (cpp_reader *pfile,
   context = next_context (pfile);
   context->tokens_kind = TOKENS_KIND_EXTENDED;
   context->buff = token_buff;
-
+  
+  if (copy) {
+    unsigned int i; cpp_token **pit;
+    for (i = 0, pit = (cpp_token **)first; i < count; pit++, i++) {
+      (*pit)->htmltag_origid = (*pit)->htmltag_tokid;
+      (*pit)->htmltag_tokid = tokid++;
+    }
+  }
+  
   m = XNEW (macro_context);
   m->macro_node = macro;
   m->virt_locs = virt_locs;
@@ -2291,7 +2299,7 @@ expand_arg (cpp_reader *pfile, macro_arg *arg, cpp_context_htmltag_info *ctxinfo
     push_extended_tokens_context (pfile, NULL, NULL,
 				  arg->virt_locs,
 				  arg->first,
-				  arg->count + 1, 0 /* no copy */);
+				  arg->count + 1, 0 /* no copy */, 0);
   else
     push_ptoken_context (pfile, NULL, NULL,
 			 arg->first, arg->count + 1, 0 /* no copy */, 1);
@@ -3052,7 +3060,7 @@ lex_expansion_token (cpp_reader *pfile, cpp_macro *macro)
 }
 
 static bool
-create_iso_definition (cpp_reader *pfile, cpp_macro *macro)
+create_iso_definition (cpp_reader *pfile, cpp_macro *macro, const cpp_token *tok)
 {
   cpp_token *token;
   const cpp_token *ctoken;
@@ -3210,6 +3218,19 @@ create_iso_definition (cpp_reader *pfile, cpp_macro *macro)
   macro->exp.tokens = (cpp_token *) BUFF_FRONT (pfile->a_buff);
   macro->traditional = 0;
 
+  if (HTMLTAG_IS_ENABLED(pfile)) {
+
+    cpp_context ctx;
+    CPP_CONTEXT_HTMLTAG_INFO_MACRO(ctxinfo, CPP_CONTEXT_HTMLTAG_DEFINE, macro->id, tok ? tok->htmltag_tokid : 0)
+    
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.tokens_kind = TOKENS_KIND_DIRECT;
+    FIRST (&ctx).token = macro->exp.tokens;
+    LAST (&ctx).token = macro->exp.tokens + macro->count - 1;
+
+    htmltag_register_token_context(pfile, &ctx, &ctxinfo);
+  }
+  
   /* Don't count the CPP_EOF.  */
   macro->count--;
 
@@ -3254,7 +3275,7 @@ create_iso_definition (cpp_reader *pfile, cpp_macro *macro)
 
 /* Parse a macro and save its expansion.  Returns nonzero on success.  */
 bool
-_cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node)
+_cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node, const cpp_token *token)
 {
   cpp_macro *macro;
   unsigned int i;
@@ -3281,7 +3302,7 @@ _cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node)
     ok = _cpp_create_trad_definition (pfile, macro);
   else
     {
-      ok = create_iso_definition (pfile, macro);
+      ok = create_iso_definition (pfile, macro, token);
 
       /* We set the type for SEEN_EOL() in directives.c.
 

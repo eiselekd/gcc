@@ -2524,6 +2524,7 @@ _cpp_temp_token (cpp_reader *pfile)
   result = pfile->cur_token++;
   result->src_loc = old->src_loc;
   result->htmltag_tokid = tokid++;
+  result->htmltag_origid = result->htmltag_tokid;
   return result;
 }
 
@@ -3115,7 +3116,9 @@ _cpp_lex_direct_real (cpp_reader *pfile)
 					       tok_range, NULL);
     }
 
+  
   result->htmltag_tokid = tokid++;
+  result->htmltag_origid = result->htmltag_tokid;
   htmltag_register_tok(pfile, result);
   
   return result;
