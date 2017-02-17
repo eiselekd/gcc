@@ -1,4 +1,5 @@
 #include <Python.h>
+#include "pinfo.h"
 
 static PyObject* helloworld(PyObject* self)
 {
@@ -13,6 +14,11 @@ static PyMethodDef helloworld_funcs[] = {
    METH_NOARGS, helloworld_docs},
   {NULL}
 };
+
+void scanhtmltag_dump(FILE *f) {
+  
+  
+}
 
 PyMODINIT_FUNC
 initpinfo(void)

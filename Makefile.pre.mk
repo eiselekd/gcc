@@ -5,31 +5,34 @@ gtags:
 
 GCC-PINFO-VERSION=github
 
+E=export PATH=$(CURDIR)/build-autoconfig/bin:$$PATH;
+
 #--enable-checking=release
+#--enable-maintainer-mode
 c_:
 	-mkdir -p $(CURDIR)/build
-	cd $(CURDIR)/build; ../configure \
+	$(E)cd $(CURDIR)/build; ../configure \
         --prefix=/opt/gcc-$(GCC-PINFO-VERSION) --disable-nls --enable-languages=c,c++ \
 	--target=x86_64-linux-gnu --host=x86_64-linux-gnu --build=x86_64-linux-gnu  \
 	--disable-bootstrap --program-suffix=-pinfo --disable-multilib   \
         --disable-shared --disable-nls --disable-libstdcxx-pch --disable-libgomp \
-	$(EXTRA_CONF_$(GCC-PINFO-VERSION)) \
+	$(EXTRA_CONF_$(GCC-PINFO-VERSION))  \
 	| tee _configure.out
 
 c:
-	cd $(CURDIR)/build; make all-gcc \
+	$(E)cd $(CURDIR)/build; make all-gcc \
 	| tee _compile.out
 
 i:
-	cd $(CURDIR)/build; make install-gcc \
+	$(E)cd $(CURDIR)/build; make install-gcc \
 	| tee _compile.out
 
 ca:
-	cd $(CURDIR)/build; make all \
+	$(E)cd $(CURDIR)/build; make all \
 	| tee _compile.out
 
 ia:
-	cd $(CURDIR)/build; make install \
+	$(E)cd $(CURDIR)/build; make install \
 	| tee _compile.out
 
 test:
@@ -46,8 +49,17 @@ ve:
 
 apt:
 	sudo apt-get install python-pip
-	sudo pip install tornado
+	sudo pip install tornado python-dev
 
 pinfo:
 	cd libcpp; rm -rf build pinfo.so;  \
 		python setup.py build_ext --inplace; 
+
+
+a:
+	if [ ! -f autoconf-2.64.tar.bz2 ]; then wget https://ftp.gnu.org/pub/gnu/autoconf/autoconf-2.64.tar.bz2; fi
+	tar xvf autoconf-2.64.tar.bz2
+	cd autoconf-2.64; ./configure --prefix=$(CURDIR)/build-autoconfig; make; make install
+	if [ ! -f automake-1.11.tar.bz2 ]; then wget https://ftp.gnu.org/gnu/automake/automake-1.11.tar.bz2; fi
+	tar xvf automake-1.11.tar.bz2
+	cd automake-1.11; ./configure --prefix=$(CURDIR)/build-autoconfig; make; make install

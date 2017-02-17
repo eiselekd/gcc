@@ -63,3 +63,6 @@ a.out
 build/
 *.pinfo
 
+autoconf-2.64.tar.bz2
+automake-1.11.tar.bz2
+build-autoconfig/
