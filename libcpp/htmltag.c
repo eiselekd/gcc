@@ -18,45 +18,40 @@ static const struct option_value_info dump_options[] =
   {"skipping", HDT_DUMP_SKIPPING}
 };
 
+/***********************************/
+/* snapshot sha */
+struct htmltag_snapshot_sha_gather_ {
+  int a;
+};
+
+static int
+htmltag_snapshot_sha_gather(cpp_reader *pfile ATTRIBUTE_UNUSED, cpp_hashnode *node, void *v ATTRIBUTE_UNUSED)
+{
+  struct htmltag_snapshot_sha_gather_ *d = (struct htmltag_snapshot_sha_gather_ *)v; (void)d;
+  
+  if (node->type == NT_MACRO && !(node->flags & NODE_BUILTIN))
+    {
+      //fputs ("#define ", print.outf);
+      //fputs ((const char *) cpp_macro_definition (pfile, node),
+      //print.outf);
+      //putc ('\n', print.outf);
+      //print.printed = false;
+      //print.src_line++;
+    }
+  return 1;
+}
+
+void htmltag_snapshot_sha(cpp_reader *pfile)
+{
+  struct htmltag_snapshot_sha_gather_ d;
+  ht_forall (pfile->hash_table, (ht_cb) htmltag_snapshot_sha_gather, &d);
+}
+
 
 /***********************************/
 /* mem mgmt */
-static int isreverted = 0;
-struct htmltag_tree *htmltag = 0;
 
-struct htmltag_tree *htmltag_alloc(enum htmltag_type typ) {
-
-  struct htmltag_tree *h = 0;
-  switch(typ) {
-  case HTMLTAG_TOKEN: {
-    struct htmltag_tree_token *tok;
-    tok = (struct htmltag_tree_token *) XCNEW(struct htmltag_tree_token);
-    h = (struct htmltag_tree *)tok;
-    break;
-  }
-  case HTMLTAG_CONTEXT: {
-    struct htmltag_tree_context *ctx;
-    ctx = (struct htmltag_tree_context *) XCNEW(struct htmltag_tree_context);
-    h = (struct htmltag_tree *)ctx;
-    break;
-  }
-  case HTMLTAG_DIRECTIVE: {
-    struct htmltag_tree_directive *ctx;
-    ctx = (struct htmltag_tree_directive *) XCNEW(struct htmltag_tree_directive);
-    h = (struct htmltag_tree *)ctx;
-    break;
-  }
-  default:
-    while(1) {};
-    break;
-  }
-
-  h->type = typ;
-  h->n = htmltag;
-  htmltag = h;
-  return h;
-}
-
+#include "htmltag_general.c"
 
 cpp_context *htmltag_clone_context(cpp_reader *pfile, const cpp_context *ctx)
 {
@@ -181,19 +176,6 @@ void htmltag_register_directive(cpp_reader *pfile, int dir_no, const cpp_token *
 
 /*******************************/
 
-void htmltag_revert(void) {
-  struct htmltag_tree *p = htmltag, *n;
-  if (isreverted)
-    return;
-  htmltag = 0;
-  while (p) {
-    n = p->n;
-    p->n = htmltag;
-    htmltag = p;
-    p = n;
-  }
-  isreverted = 1;
-}
 
 static const char *ctx_to_name[32] = {
   0,
