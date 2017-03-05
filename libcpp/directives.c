@@ -1150,6 +1150,9 @@ _cpp_do_file_change (cpp_reader *pfile, enum lc_reason reason,
 
   if (pfile->cb.file_change)
     pfile->cb.file_change (pfile, ord_map);
+
+  htmltag_cpp_do_file_change (pfile, reason, to_file, file_line ,sysp );
+
 }
 
 /* Report a warning or error detected by the program we are

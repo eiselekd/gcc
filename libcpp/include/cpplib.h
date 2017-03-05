@@ -270,7 +270,7 @@ struct GTY(()) cpp_token {
   } GTY ((desc ("cpp_token_val_index (&%1)"))) val;
 
 #ifdef HTMLTAG_ENABLE
-  int htmltag_tokid, htmltag_origid;
+  long htmltag_tokid, htmltag_origid;
   //struct cpp_macro *htmltag_macro;
 #endif
 };

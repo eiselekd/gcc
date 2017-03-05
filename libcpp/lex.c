@@ -23,6 +23,7 @@ along with this program; see the file COPYING3.  If not see
 #include "system.h"
 #include "cpplib.h"
 #include "internal.h"
+#include "htmltag.h"
 
 enum spell_type
 {
@@ -37,8 +38,6 @@ struct token_spelling
   enum spell_type category;
   const unsigned char *name;
 };
-
-int tokid = 1;
 
 static const unsigned char *const digraph_spellings[] =
 { UC"%:", UC"%:%:", UC"<:", UC":>", UC"<%", UC"%>" };
@@ -2523,7 +2522,7 @@ _cpp_temp_token (cpp_reader *pfile)
 
   result = pfile->cur_token++;
   result->src_loc = old->src_loc;
-  result->htmltag_tokid = tokid++;
+  result->htmltag_tokid = htmltag_new_tokid();
   result->htmltag_origid = result->htmltag_tokid;
   return result;
 }
@@ -3117,7 +3116,7 @@ _cpp_lex_direct_real (cpp_reader *pfile)
     }
 
   
-  result->htmltag_tokid = tokid++;
+  result->htmltag_tokid = htmltag_new_tokid();
   result->htmltag_origid = result->htmltag_tokid;
   htmltag_register_tok(pfile, result);
   

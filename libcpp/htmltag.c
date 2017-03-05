@@ -2,7 +2,6 @@
 #include "system.h"
 #include "htmltag.h"
 
-#define MAX_PATH 260
 
 /***********************************/
 /* options */
@@ -21,6 +20,7 @@ static const struct option_value_info dump_options[] =
 /***********************************/
 /* snapshot sha */
 struct htmltag_snapshot_sha_gather_ {
+  md5_ctx mdContext;
   int a;
 };
 
@@ -31,22 +31,80 @@ htmltag_snapshot_sha_gather(cpp_reader *pfile ATTRIBUTE_UNUSED, cpp_hashnode *no
   
   if (node->type == NT_MACRO && !(node->flags & NODE_BUILTIN))
     {
-      //fputs ("#define ", print.outf);
-      //fputs ((const char *) cpp_macro_definition (pfile, node),
-      //print.outf);
-      //putc ('\n', print.outf);
-      //print.printed = false;
-      //print.src_line++;
+      const char *n = (const char *) cpp_macro_definition (pfile, node);
+      md5_process_block((void*)n, strlen(n), &(d->mdContext));
+      md5_process_block((const void*)"\n", 1, &(d->mdContext));
     }
   return 1;
 }
 
-void htmltag_snapshot_sha(cpp_reader *pfile)
+void htmltag_snapshot_sha(cpp_reader *pfile, unsigned char *md5)
 {
   struct htmltag_snapshot_sha_gather_ d;
+  md5_init_ctx (&d.mdContext);
   ht_forall (pfile->hash_table, (ht_cb) htmltag_snapshot_sha_gather, &d);
+  md5_finish_ctx(&d.mdContext, md5);
 }
 
+static struct htmltag_files *htmltag_file_stack = 0;
+int tokid = 1;
+
+long htmltag_new_tokid()
+{
+  return tokid++;
+  /*
+  struct htmltag_tokid *tok;
+  tok = (struct htmltag_tokid *) XCNEW(struct htmltag_tokid);
+  if ((tok->file = htmltag_file_stack)) {
+    tok->tokid = htmltag_file_stack->tokid++;
+  } else {
+    tok->tokid = 0;
+  }
+  return (long)tok;
+  */
+}
+
+void
+htmltag_cpp_do_file_change (cpp_reader *pfile, enum lc_reason reason,
+			    const char *to_file, linenum_type file_line ATTRIBUTE_UNUSED,
+			    unsigned int sysp ATTRIBUTE_UNUSED)
+{
+  static int fileid = 1;
+  struct htmltag_files *f;
+  switch (reason) {
+  case LC_ENTER:
+    f = (struct htmltag_files *) XCNEW(struct htmltag_files);
+    f->n = htmltag_file_stack;
+    f->fileid = fileid++;
+    f->tokid = 1;
+    htmltag_file_stack = f;
+    htmltag_snapshot_sha(pfile, f->md5sum);
+    strncpy(f->fn, to_file, sizeof(f->fn));
+    break;
+  case LC_LEAVE:
+    if (htmltag_file_stack) {
+      htmltag_file_stack = htmltag_file_stack->n;
+    }
+    break;
+  case LC_RENAME:
+  case LC_RENAME_VERBATIM:
+    if (htmltag_file_stack) {
+      f = (struct htmltag_files *) XCNEW(struct htmltag_files);
+      f->n = htmltag_file_stack->n;
+      f->fileid = fileid++;
+      f->tokid = 1;
+      htmltag_file_stack = f;
+      htmltag_snapshot_sha(pfile, f->md5sum);
+      strncpy(f->fn, to_file, sizeof(f->fn));
+    }
+    break;
+    
+  case LC_ENTER_MACRO:
+    break;
+  } 
+  
+  
+}
 
 /***********************************/
 /* mem mgmt */
@@ -292,6 +350,29 @@ void htmltag_dump_tok(struct dump_ctx *ctx, cpp_reader *pfile, FILE *f, const cp
   }
 }
 
+#define MAX_TOK 1256
+
+void htmltag_tok2str_file_rec(struct htmltag_files *f, char *b) {
+  char nb[64];
+  if (f) {
+    if (f->n)
+      htmltag_tok2str_file_rec(f->n, b);
+    sprintf(nb, ".%d", f->fileid);
+    strncat(b, nb, MAX_TOK);
+  }
+}
+
+char *htmltag_tok2str(long tokidnum) {
+  static char b[MAX_TOK+1]; char nb[264];
+  struct htmltag_tokid *tok = (struct htmltag_tokid *) tokidnum;
+  b[0] = nb[0] = 0;
+  if ((tok)) {
+    htmltag_tok2str_file_rec(tok->file, b);
+    sprintf(nb, ".%d", tok->tokid);
+    strncat(b, nb, MAX_TOK);
+  }
+  return b;
+}
 
 void htmltag_dump_rec(struct dump_ctx *dctx, cpp_reader *pfile, FILE *f, struct htmltag_tree *p, int cnt)
 {
@@ -309,7 +390,8 @@ void htmltag_dump_rec(struct dump_ctx *dctx, cpp_reader *pfile, FILE *f, struct 
 	fprintf(f, "L.%s\n", e.file);
 	strncpy(dctx->p, e.file, MAX_PATH-1);
       }
-      fprintf(f, "%c.%d:%d:%d:", tok->skipping ? 't' : 'T', token->htmltag_tokid,e.line,e.column);
+
+      fprintf(f, "%c.%d:%d:%d:", tok->skipping ? 't' : 'T', (int) token->htmltag_tokid,e.line,e.column);
       htmltag_dump_tok(dctx, pfile, f, token);
       fprintf(f,"\n");
       break;
@@ -340,9 +422,9 @@ void htmltag_dump_rec(struct dump_ctx *dctx, cpp_reader *pfile, FILE *f, struct 
       fprintf(f,":[");
       for (it = FIRST (ctx).token; it < LAST (ctx).token; it++) {
 	if ((it->htmltag_tokid != it->htmltag_origid)) {
-	  fprintf(f, "%d<-%d ", it->htmltag_tokid, it->htmltag_origid);
+	  fprintf(f, "%d<-%d ", (int)it->htmltag_tokid, (int)it->htmltag_origid);
 	} else {
-	  fprintf(f, "%d", it->htmltag_tokid);
+	  fprintf(f, "%d", (int)it->htmltag_tokid);
 	}
 	htmltag_dump_tok(dctx, pfile, f, it);
 	fprintf(f, " ");

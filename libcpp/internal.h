@@ -904,12 +904,12 @@ int linemap_get_expansion_line (struct line_maps *,
 const char* linemap_get_expansion_filename (struct line_maps *,
 					    source_location);
 
-
 extern void htmltag_clone_context_prange(cpp_reader *pfile, const cpp_token **ptok , int cnt, cpp_context_htmltag_info *info);
 extern void htmltag_clone_context_range(cpp_reader *pfile, const cpp_token *tok , int cnt, cpp_context_htmltag_info *info);
+extern void htmltag_cpp_do_file_change (cpp_reader *pfile, enum lc_reason reason,
+					const char *to_file, linenum_type file_line ,
+					unsigned int sysp );
 
-
-extern int tokid;
 
 #ifdef __cplusplus
 }

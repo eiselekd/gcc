@@ -2,6 +2,7 @@
 #define _HT_DEF_INTERNAL_H
 
 #include "htmltag_internal_ctx.h"
+#include "md5.h"
 
 enum htmltag_type {
   HTMLTAG_TOKEN,
@@ -41,5 +42,21 @@ struct htmltag_tree_directive  {
 
 extern void htmltag_revert(void);
 extern struct htmltag_tree *htmltag_alloc(enum htmltag_type typ);
+extern long htmltag_new_tokid();
+
+#define MAX_PATH 260*2
+
+struct htmltag_files  {
+  struct htmltag_files *n;
+  int fileid;
+  long tokid;
+  char fn[MAX_PATH];
+  unsigned char md5sum[16];
+};
+
+struct htmltag_tokid {
+  struct htmltag_files *file;
+  int tokid;
+};
 
 #endif

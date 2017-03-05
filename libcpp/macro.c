@@ -26,6 +26,7 @@ along with this program; see the file COPYING3.  If not see
 #include "system.h"
 #include "cpplib.h"
 #include "internal.h"
+#include "htmltag.h"
 
 int context_idrun = 0;
 int macro_id = 0;
@@ -1968,7 +1969,7 @@ push_ptoken_context (cpp_reader *pfile, cpp_hashnode *macro, _cpp_buff *buff,
     for (i = 0, pit = first; i < count; pit++, i++) {
       cpy[i] = **pit;
       cpy[i].htmltag_origid = cpy[i].htmltag_tokid;
-      cpy[i].htmltag_tokid = tokid++;
+      cpy[i].htmltag_tokid = htmltag_new_tokid();
     }  
     
     _cpp_push_token_context (pfile, macro,
@@ -2051,7 +2052,7 @@ push_extended_tokens_context (cpp_reader *pfile,
     unsigned int i; cpp_token **pit;
     for (i = 0, pit = (cpp_token **)first; i < count; pit++, i++) {
       (*pit)->htmltag_origid = (*pit)->htmltag_tokid;
-      (*pit)->htmltag_tokid = tokid++;
+      (*pit)->htmltag_tokid = htmltag_new_tokid();
     }
   }
   
