@@ -5,7 +5,6 @@
     <link href="/static/styles.css" media="screen" rel="stylesheet" type="text/css">
     <link href="/static/jquery-ui-1.12.1/jquery-ui.css" media="screen" rel="stylesheet" type="text/css">
     <link href="/static/jquery.contextMenu.css" media="screen" rel="stylesheet" type="text/css">
-    
     <script src="/static/jquery-ui-1.12.1/external/jquery/jquery.js"></script>
     <script src="/static/jquery-ui-1.12.1/jquery-ui.js"></script>
     <script src="/static/jquery.ui.position.js"></script>
@@ -14,6 +13,10 @@
     <script src="/static/websocket.js"></script>
   </head>
   <body>
-    <script>fetchData("{{url_escape(filename)}}")</script>
+    <script>
+      var h = new htmltag("ws://{{serverurl}}/ws", function(ar) { });
+      h.start();
+      h.fetchData( "{{url_escape(filename)}}");
+    </script>
   </body>
 </html>

@@ -10,9 +10,6 @@ import six, re
 import argparse
 #import pinfo
 
-
-
-
 class NetWebSocket(tornado.websocket.WebSocketHandler):
     def open(self):
         print("WebSocket opened")
@@ -20,10 +17,11 @@ class NetWebSocket(tornado.websocket.WebSocketHandler):
         pass
     def on_message(self, message):
         p = str(message)
-        try:
-            print (eval(p));
-        except Exception as e:
-            print("WebSocket on_message: '%s' : %s" %(p,str(e)))
+        print("WebSocket on_message: '%s' " %(p))
+        #try:
+        #    print (eval(p));
+        #except Exception as e:
+        #    print("WebSocket on_message: '%s' : %s" %(p,str(e)))
     def on_close(self):
         print("WebSocket closed")
 
@@ -40,8 +38,10 @@ class IndexHandler(RequestHandler):
 
 class ViewHandler(RequestHandler):
     def get(self):
+        global cmdlineopts
         print("[+] render force.html")
-        self.render('pinfo.html', filename=self.get_argument("filename"))
+        self.render('pinfo.html', filename=self.get_argument("filename"), \
+                    serverurl = ("%s:%d" %(cmdlineopts.base, cmdlineopts.port)))
 
 class DataHandler(RequestHandler):
     def get(self):
@@ -76,6 +76,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", action="count", default=0)
     parser.add_argument("-p", "--port", type=int, help='default gui port', default=11000)
+    parser.add_argument("-b", "--base", type=str, help='server url', default="localhost")
     cmdlineopts = parser.parse_args()
     n = netgui(cmdlineopts, port=cmdlineopts.port)
     n.start()
