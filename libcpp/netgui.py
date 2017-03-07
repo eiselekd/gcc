@@ -8,7 +8,7 @@ from tornado.web import RequestHandler, Application
 from tornado.websocket import *
 import six, re
 import argparse
-import pinfo
+#import pinfo
 
 
 
@@ -30,19 +30,18 @@ class NetWebSocket(tornado.websocket.WebSocketHandler):
 class IndexHandler(RequestHandler):
     def get(self):
         print("[+] render index.html")
-        self.render('index.html', filename="index")
-        #   files = []
-        #   for filename in os.listdir("profiles"):
-        #       mtime = os.stat(os.path.join("profiles", filename)).st_mtime
-        #       files.append((mtime, filename))
-        #   # sort by descending mtime then ascending filename
-        #   files.sort(key=lambda x: (-x[0], x[1]))
-        #   self.render('index.html', files=[f[1] for f in files])
+        files = []
+        for filename in os.listdir("t"):
+            mtime = os.stat(os.path.join("t", filename)).st_mtime
+            files.append((mtime, filename))
+        # sort by descending mtime then ascending filename
+        files.sort(key=lambda x: (-x[0], x[1]))
+        self.render('index.html', files=[f[1] for f in files])
 
 class ViewHandler(RequestHandler):
     def get(self):
         print("[+] render force.html")
-        self.render('force.html', filename=self.get_argument("filename"))
+        self.render('pinfo.html', filename=self.get_argument("filename"))
 
 class DataHandler(RequestHandler):
     def get(self):

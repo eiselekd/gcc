@@ -14,12 +14,6 @@
     <script src="/static/websocket.js"></script>
   </head>
   <body>
-
-   <ul>
-     {% for f in files %}
-     <li><a href="/view?filename={{f}}">{{f}}</a></li>
-     {% end for %}
-   </ul>
-    
+    <script>fetchData("{{url_escape(filename)}}")</script>
   </body>
 </html>
